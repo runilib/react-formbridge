@@ -1,3 +1,5 @@
+// ─── Core ─────────────────────────────────────────────────────────────────────
+
 export type {
   JsonFieldDescriptor,
   JsonFieldType,
@@ -56,7 +58,7 @@ export {
   type UseReadonlyFormReturn,
   useReadonlyFormBridge,
 } from './hooks/shared/useReadonlyFormBridge';
-export { useFormBridge } from './hooks/useFormBridge.web';
+export { useFormBridge } from './hooks/useFormBridge.native';
 // ─── FormHost ────────────────────────────────────────────────────────────────────
 export {
   FieldHost,

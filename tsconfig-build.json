@@ -5,8 +5,12 @@
     "moduleResolution": "bundler",
     "customConditions": ["react-native"],
     "resolvePackageJsonImports": false,
+    "rootDir": "./src",
+    "outDir": "./dist",
     "types": ["node", "react"],
-    "noEmit": true
+    "declaration": true,
+    "noEmit": false,
   },
-  "include": ["src"]
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules", "**/*.test.*", "**/*.spec.*", "**/__tests__/**"]
 }
