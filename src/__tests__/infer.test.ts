@@ -1,4 +1,5 @@
-import { inferFromObject, inferFromType } from '../formly-extra-v1/src/builders/infer';
+import { describe, expect, it } from 'vitest';
+import { inferFromObject, inferFromType } from '../core/field-builders/infer';
 
 describe('inferFromObject', () => {
   it('infers text type for plain string values', () => {
@@ -72,7 +73,10 @@ describe('inferFromObject', () => {
   });
 
   it('applies overrides — type override', () => {
-    const schema = inferFromObject({ role: '' }, { role: { type: 'select', options: ['admin', 'user'] } });
+    const schema = inferFromObject(
+      { role: '' },
+      { role: { type: 'select', options: ['admin', 'user'] } },
+    );
     expect(schema.role._type).toBe('select');
     expect(schema.role._options).toHaveLength(2);
   });
@@ -86,7 +90,7 @@ describe('inferFromObject', () => {
   it('applies overrides — disabled + hidden', () => {
     const schema = inferFromObject(
       { id: 'abc', secret: '' },
-      { id: { disabled: true }, secret: { hidden: true } }
+      { id: { disabled: true }, secret: { hidden: true } },
     );
     expect(schema.id._disabled).toBe(true);
     expect(schema.secret._hidden).toBe(true);
@@ -98,10 +102,10 @@ describe('inferFromType', () => {
 
   it('builds schema from type descriptor', () => {
     const schema = inferFromType<User>({
-      name:   { label: 'Full name', required: true },
-      email:  { label: 'Email',     required: true },
-      age:    { label: 'Age',       min: 18         },
-      active: { label: 'Active',   type: 'switch'  },
+      name: { label: 'Full name', required: true },
+      email: { label: 'Email', required: true },
+      age: { label: 'Age', min: 18 },
+      active: { label: 'Active', type: 'switch' },
     });
     expect(schema.name._label).toBe('Full name');
     expect(schema.name._required).toBe(true);
@@ -115,17 +119,23 @@ describe('inferFromType', () => {
   });
 
   it('sets 0 default for number fields', () => {
-    const schema = inferFromType<{ age: number }>({ age: { label: 'Age', type: 'number' } });
+    const schema = inferFromType<{ age: number }>({
+      age: { label: 'Age', type: 'number' },
+    });
     expect(schema.age._defaultValue).toBe(0);
   });
 
   it('sets false default for switch fields', () => {
-    const schema = inferFromType<{ ok: boolean }>({ ok: { label: 'OK', type: 'switch' } });
+    const schema = inferFromType<{ ok: boolean }>({
+      ok: { label: 'OK', type: 'switch' },
+    });
     expect(schema.ok._defaultValue).toBe(false);
   });
 
   it('respects explicit defaultValue', () => {
-    const schema = inferFromType<{ name: string }>({ name: { label: 'Name', defaultValue: 'AKS' } });
+    const schema = inferFromType<{ name: string }>({
+      name: { label: 'Name', defaultValue: 'AKS' },
+    });
     expect(schema.name._defaultValue).toBe('AKS');
   });
 });

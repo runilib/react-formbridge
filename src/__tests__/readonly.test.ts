@@ -1,32 +1,33 @@
 import { renderHook } from '@testing-library/react';
-import { useReadonlyForm } from '../formly-extra-v1/src/hooks/useReadonlyForm';
-import { field } from '../src/builders/field';
+import { describe, expect, it } from 'vitest';
+import { field } from '../core/field-builders/field';
+import { useReadonlyFormBridge } from '../hooks/shared/useReadonlyForm';
 
 const SCHEMA = {
-  name:     field.text('Full name'),
-  email:    field.email('Email'),
-  age:      field.number('Age'),
-  active:   field.switch('Active'),
-  country:  field.select('Country').options([
+  name: field.text('Full name'),
+  email: field.email('Email'),
+  age: field.number('Age'),
+  active: field.switch('Active'),
+  country: field.select('Country').options([
     { label: 'France', value: 'FR' },
-    { label: 'US',     value: 'US' },
+    { label: 'US', value: 'US' },
   ]),
   password: field.password('Password'),
 };
 
 const VALUES = {
-  name:    'AKS',
-  email:   'aks@unikit.dev',
-  age:     30,
-  active:  true,
+  name: 'AKS',
+  email: 'aks@unikit.dev',
+  age: 30,
+  active: true,
   country: 'FR',
-  password:'secret123',
+  password: 'secret123',
 };
 
-describe('useReadonlyForm — readonly mode', () => {
+describe('useReadonlyFormBridgeBridge — readonly mode', () => {
   it('returns all non-hidden fields', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, { mode: 'readonly', values: VALUES as any })
+      useReadonlyFormBridge(SCHEMA, { mode: 'readonly', values: VALUES as any }),
     );
     expect(result.current.fieldNames).toContain('name');
     expect(result.current.fieldNames).toContain('email');
@@ -34,7 +35,7 @@ describe('useReadonlyForm — readonly mode', () => {
 
   it('formats string values as-is', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, { mode: 'readonly', values: VALUES as any })
+      useReadonlyFormBridge(SCHEMA, { mode: 'readonly', values: VALUES as any }),
     );
     expect(result.current.fields.name.display).toBe('AKS');
     expect(result.current.fields.email.display).toBe('aks@unikit.dev');
@@ -42,57 +43,60 @@ describe('useReadonlyForm — readonly mode', () => {
 
   it('formats boolean → Yes/No', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, { mode: 'readonly', values: VALUES as any })
+      useReadonlyFormBridge(SCHEMA, { mode: 'readonly', values: VALUES as any }),
     );
     expect(result.current.fields.active.display).toBe('✓ Yes');
   });
 
   it('formats select options by label', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, { mode: 'readonly', values: VALUES as any })
+      useReadonlyFormBridge(SCHEMA, { mode: 'readonly', values: VALUES as any }),
     );
     expect(result.current.fields.country.display).toBe('France');
   });
 
   it('masks password fields', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, { mode: 'readonly', values: VALUES as any })
+      useReadonlyFormBridge(SCHEMA, { mode: 'readonly', values: VALUES as any }),
     );
     expect(result.current.fields.password.display).toBe('••••••••');
   });
 
   it('formats empty/null values as —', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, { mode: 'readonly', values: { ...VALUES, name: '' } as any })
+      useReadonlyFormBridge(SCHEMA, {
+        mode: 'readonly',
+        values: { ...VALUES, name: '' } as any,
+      }),
     );
     expect(result.current.fields.name.display).toBe('—');
   });
 
   it('hasChanges is false in readonly mode', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, { mode: 'readonly', values: VALUES as any })
+      useReadonlyFormBridge(SCHEMA, { mode: 'readonly', values: VALUES as any }),
     );
     expect(result.current.hasChanges).toBe(false);
   });
 });
 
-describe('useReadonlyForm — diff mode', () => {
+describe('useReadonlyFormBridge — diff mode', () => {
   const ORIGINAL = {
-    name:    'Old Name',
-    email:   'old@email.com',
-    age:     25,
-    active:  false,
+    name: 'Old Name',
+    email: 'old@email.com',
+    age: 25,
+    active: false,
     country: 'US',
-    password:'oldpass',
+    password: 'oldpass',
   };
 
   it('detects changed fields', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, {
-        mode:           'diff',
-        values:         VALUES as any,
+      useReadonlyFormBridge(SCHEMA, {
+        mode: 'diff',
+        values: VALUES as any,
         originalValues: ORIGINAL as any,
-      })
+      }),
     );
     expect(result.current.changedFields).toContain('name');
     expect(result.current.changedFields).toContain('email');
@@ -103,11 +107,11 @@ describe('useReadonlyForm — diff mode', () => {
 
   it('marks changed as true for changed fields', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, {
-        mode:           'diff',
-        values:         VALUES as any,
+      useReadonlyFormBridge(SCHEMA, {
+        mode: 'diff',
+        values: VALUES as any,
         originalValues: ORIGINAL as any,
-      })
+      }),
     );
     expect(result.current.fields.name.changed).toBe(true);
     expect(result.current.fields.email.changed).toBe(true);
@@ -115,22 +119,22 @@ describe('useReadonlyForm — diff mode', () => {
 
   it('marks changed as false for unchanged fields', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, {
-        mode:           'diff',
-        values:         VALUES as any,
+      useReadonlyFormBridge(SCHEMA, {
+        mode: 'diff',
+        values: VALUES as any,
         originalValues: { ...ORIGINAL, name: VALUES.name } as any,
-      })
+      }),
     );
     expect(result.current.fields.name.changed).toBe(false);
   });
 
   it('provides originalDisplay for changed fields', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, {
-        mode:           'diff',
-        values:         VALUES as any,
+      useReadonlyFormBridge(SCHEMA, {
+        mode: 'diff',
+        values: VALUES as any,
         originalValues: ORIGINAL as any,
-      })
+      }),
     );
     expect(result.current.fields.name.originalDisplay).toBe('Old Name');
     expect(result.current.fields.country.originalDisplay).toBe('US'); // no option match → raw value
@@ -138,22 +142,22 @@ describe('useReadonlyForm — diff mode', () => {
 
   it('hasChanges is true when fields differ', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, {
-        mode:           'diff',
-        values:         VALUES as any,
+      useReadonlyFormBridge(SCHEMA, {
+        mode: 'diff',
+        values: VALUES as any,
         originalValues: ORIGINAL as any,
-      })
+      }),
     );
     expect(result.current.hasChanges).toBe(true);
   });
 
   it('hasChanges is false when nothing changed', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, {
-        mode:           'diff',
-        values:         VALUES as any,
+      useReadonlyFormBridge(SCHEMA, {
+        mode: 'diff',
+        values: VALUES as any,
         originalValues: VALUES as any,
-      })
+      }),
     );
     expect(result.current.hasChanges).toBe(false);
     expect(result.current.changedFields).toHaveLength(0);
@@ -161,11 +165,11 @@ describe('useReadonlyForm — diff mode', () => {
 
   it('applies custom formatter', () => {
     const { result } = renderHook(() =>
-      useReadonlyForm(SCHEMA, {
-        mode:       'diff',
-        values:     VALUES as any,
+      useReadonlyFormBridge(SCHEMA, {
+        mode: 'diff',
+        values: VALUES,
         formatters: { age: (v) => `${v} years old` },
-      })
+      }),
     );
     expect(result.current.fields.age.display).toBe('30 years old');
   });

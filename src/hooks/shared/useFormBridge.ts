@@ -13,221 +13,19 @@ import type {
   FormState,
   SchemaValues,
   UseFormOptions,
-  ValidationTrigger,
 } from '../../types';
 import {
-  type FormAnalyticsTracker,
-  useFormBridgeAnalytics,
-} from './useFormBridgeAnalytics';
-
-function makeInitialState<S extends FormSchema>(values: SchemaValues<S>): FormState<S> {
-  return {
-    values,
-    errors: {},
-    touched: {},
-    dirty: {},
-    status: 'idle',
-    isValid: true,
-    isDirty: false,
-    isSubmitting: false,
-    isSuccess: false,
-    isError: false,
-    submitCount: 0,
-    submitError: null,
-  };
-}
-
-function buildSchemaRuntime<S extends FormSchema>(
-  schema: S,
-): {
-  descriptors: Record<string, FieldDescriptor<unknown>>;
-  conditionsMap: Record<string, FieldConditions>;
-} {
-  const desc: Record<string, FieldDescriptor<unknown>> = {};
-  const conds: Record<string, FieldConditions> = {};
-
-  for (const [key, val] of Object.entries(schema)) {
-    let built: FieldDescriptor<unknown>;
-
-    if (
-      val &&
-      typeof val === 'object' &&
-      '_build' in val &&
-      typeof (val as { _build?: unknown })._build === 'function'
-    ) {
-      built = (val as { _build: () => FieldDescriptor<unknown> })._build();
-    } else {
-      built = val as FieldDescriptor<unknown>;
-    }
-
-    desc[key] = built;
-
-    const candidate = val as { _conditions?: FieldConditions };
-    if (candidate?._conditions) {
-      conds[key] = candidate._conditions;
-    } else {
-      const builtConditions = (built as { _conditions?: FieldConditions })._conditions;
-
-      if (builtConditions) {
-        conds[key] = builtConditions;
-      }
-    }
-  }
-
-  return {
-    descriptors: desc,
-    conditionsMap: conds,
-  };
-}
-
-function shallowEqualErrors(
-  a: Record<string, string | undefined>,
-  b: Record<string, string | undefined>,
-): boolean {
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-
-  if (aKeys.length !== bKeys.length) return false;
-
-  for (const key of aKeys) {
-    if (a[key] !== b[key]) return false;
-  }
-
-  return true;
-}
-
-function shouldValidate({
-  trigger,
-  event,
-  isTouched,
-  submitted,
-  revalidate,
-}: {
-  trigger: ValidationTrigger;
-  event: 'onChange' | 'onBlur';
-  isTouched: boolean;
-  submitted: boolean;
-  revalidate: ValidationTrigger;
-}): boolean {
-  const mode = submitted ? revalidate : trigger;
-
-  if (mode === 'onChange' && event === 'onChange') return true;
-  if (mode === 'onBlur' && event === 'onBlur') return true;
-  if (mode === 'onTouched' && isTouched) return true;
-
-  return false;
-}
-
-function applyImmediateTransforms(
-  descriptor: FieldDescriptor<unknown>,
-  rawValue: unknown,
-): unknown {
-  let nextValue = rawValue;
-
-  if (descriptor._transform) {
-    nextValue = (descriptor._transform as (value: unknown) => unknown)(nextValue);
-  }
-
-  return nextValue;
-}
-
-function applyCommittedTransforms(
-  descriptor: FieldDescriptor<unknown>,
-  rawValue: unknown,
-): unknown {
-  let nextValue = applyImmediateTransforms(descriptor, rawValue);
-
-  if (descriptor._trim && typeof nextValue === 'string') {
-    nextValue = nextValue.trim();
-  }
-
-  return nextValue;
-}
-
-function shallowEqualObject(
-  a: Record<string, unknown> | undefined,
-  b: Record<string, unknown> | undefined,
-): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-
-  if (aKeys.length !== bKeys.length) return false;
-
-  for (const key of aKeys) {
-    if (!Object.is(a[key], b[key])) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function areVisibilityMapsEqual(a: VisibilityMap, b: VisibilityMap): boolean {
-  if (a === b) return true;
-
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-
-  if (aKeys.length !== bKeys.length) return false;
-
-  for (const key of aKeys) {
-    if (
-      !shallowEqualObject(
-        a[key] as unknown as Record<string, unknown>,
-        b[key] as unknown as Record<string, unknown>,
-      )
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-type AnalyticsTracker = FormAnalyticsTracker | null;
-
-function emitFieldErrorAnalytics(
-  analytics: AnalyticsTracker,
-  name: string,
-  previousError: string | undefined,
-  nextError: string | undefined,
-): void {
-  if (previousError === nextError) {
-    return;
-  }
-
-  if (nextError) {
-    analytics?.onFieldError(name, nextError);
-    return;
-  }
-
-  if (previousError) {
-    analytics?.onFieldErrorFixed(name);
-  }
-}
-
-function emitErrorsDiffAnalytics(
-  analytics: AnalyticsTracker,
-  previousErrors: Record<string, string | undefined>,
-  nextErrors: Record<string, string | undefined>,
-): void {
-  const fieldNames = new Set([
-    ...Object.keys(previousErrors),
-    ...Object.keys(nextErrors),
-  ]);
-
-  for (const fieldName of fieldNames) {
-    emitFieldErrorAnalytics(
-      analytics,
-      fieldName,
-      previousErrors[fieldName],
-      nextErrors[fieldName],
-    );
-  }
-}
+  applyCommittedTransforms,
+  applyImmediateTransforms,
+  areVisibilityMapsEqual,
+  buildSchemaRuntime,
+  emitErrorsDiffAnalytics,
+  emitFieldErrorAnalytics,
+  makeInitialState,
+  shallowEqualErrors,
+  shouldValidate,
+} from './helpers';
+import { useFormBridgeAnalytics } from './useFormAnalytics';
 
 export function useFormBridgeCore<const S extends FormSchema>(
   schema: S,
@@ -596,15 +394,15 @@ export function useFormBridgeCore<const S extends FormSchema>(
       const isTouched = Boolean(currentState.touched[name as keyof S]);
       const submitted = currentState.submitCount > 0;
 
-      if (
-        shouldValidate({
-          trigger: validateOn,
-          event: 'onChange',
-          isTouched,
-          submitted,
-          revalidate: revalidateOn,
-        })
-      ) {
+      const shoulVal = shouldValidate({
+        trigger: validateOn,
+        event: 'onChange',
+        isTouched,
+        submitted,
+        revalidate: revalidateOn,
+      });
+
+      if (shoulVal) {
         clearTimeout(debounceRefs.current[name]);
 
         setRuntimeState((current) => ({

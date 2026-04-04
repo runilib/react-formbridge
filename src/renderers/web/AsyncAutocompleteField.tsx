@@ -13,13 +13,13 @@ import React, {
 
 import { useAsyncOptions } from '../../hooks/shared/useAsyncOptions';
 import type {
-  ExtraFieldProps,
   FieldDescriptor,
   FieldRenderProps,
   SelectOption,
   SelectPickerRenderContext,
 } from '../../types';
-import { defaultBorderColor, shouldHighlightOnError } from './shared';
+import type { ExtraFieldProps } from '../../types.web';
+import { type ResolvedWebFieldUi, shouldHighlightOnError } from './shared';
 
 type AsyncAutocompleteSlot =
   | 'root'
@@ -82,24 +82,10 @@ interface Props extends FieldRenderProps<string> {
   descriptor: FieldDescriptor<string> & {
     _asyncOptions: NonNullable<FieldDescriptor<string>['_asyncOptions']>;
     _searchable?: boolean;
-    _ui?: {
-      id?: string;
-      readOnly?: boolean;
-      autoComplete?: string;
-      autoFocus?: boolean;
-      spellCheck?: boolean;
-      rootClassName?: string;
-      labelClassName?: string;
-      inputClassName?: string;
-      rootStyle?: Record<string, unknown>;
-      labelStyle?: Record<string, unknown>;
-      inputStyle?: Record<string, unknown>;
-      highlightOnError?: boolean;
-      renderPicker?: (ctx: SelectPickerRenderContext) => React.ReactNode;
-    };
+    _ui?: ResolvedWebFieldUi;
   };
-  extra?: ExtraFieldProps & {
-    appearance?: AsyncAutocompleteUiOverrides;
+  extra?: ExtraFieldProps<AsyncAutocompleteUiOverrides> & {
+    ui?: AsyncAutocompleteUiOverrides;
   };
 }
 
@@ -117,13 +103,13 @@ function normalize(value: unknown): string {
   return value == null ? '' : String(value);
 }
 
-export const WebAsyncAutocompleteField: React.FC<Props> = ({
+export const AsyncAutocompleteField: React.FC<Props> = ({
   descriptor,
   extra,
   ...props
 }) => {
   const reactId = useId();
-  const ui = extra?.appearance;
+  const ui = extra?.ui;
   const fieldUi = descriptor._ui ?? {};
   const renderPicker = ui?.renderPicker ?? fieldUi.renderPicker;
   const { rootProps, labelProps, inputProps, hintProps, errorProps } = ui ?? {};
@@ -404,22 +390,9 @@ export const WebAsyncAutocompleteField: React.FC<Props> = ({
     </span>
   );
 
-  const rootClassName = cx(
-    extra?.className,
-    fieldUi.rootClassName,
-    ui?.classNames?.root,
-    rootPropsClassName,
-  );
-  const labelClassName = cx(
-    fieldUi.labelClassName,
-    ui?.classNames?.label,
-    labelPropsClassName,
-  );
-  const inputClassName = cx(
-    fieldUi.inputClassName,
-    ui?.classNames?.input,
-    inputPropsClassName,
-  );
+  const rootClassName = cx(extra?.className, ui?.classNames?.root, rootPropsClassName);
+  const labelClassName = cx(ui?.classNames?.label, labelPropsClassName);
+  const inputClassName = cx(ui?.classNames?.input, inputPropsClassName);
 
   return (
     <div
@@ -427,8 +400,7 @@ export const WebAsyncAutocompleteField: React.FC<Props> = ({
       className={rootClassName}
       style={mergeStyles(
         { display: 'flex', flexDirection: 'column', gap: 5, position: 'relative' },
-        extra?.style as CSSProperties | undefined,
-        fieldUi.rootStyle,
+        extra?.style,
         ui?.styles?.root,
         rootPropsStyle,
       )}
@@ -445,12 +417,7 @@ export const WebAsyncAutocompleteField: React.FC<Props> = ({
           <label
             htmlFor={id}
             className={labelClassName}
-            style={mergeStyles(
-              { fontSize: 13, fontWeight: 600, color: '#374151' },
-              fieldUi.labelStyle,
-              ui?.styles?.label,
-              labelPropsStyle,
-            )}
+            style={mergeStyles(ui?.styles?.label, labelPropsStyle)}
             {...labelPropsRest}
           >
             {props.label}
@@ -472,26 +439,13 @@ export const WebAsyncAutocompleteField: React.FC<Props> = ({
             onClick={handleFocus}
             style={mergeStyles(
               {
-                padding: '10px 13px',
-                borderRadius: 8,
-                border: `1.5px solid ${defaultBorderColor(
-                  Boolean(props.error),
-                  highlightOnError,
-                  '#e5e7eb',
-                )}`,
-                fontSize: 14,
-                outline: 'none',
-                background: props.disabled ? '#f9fafb' : '#fff',
-                color: '#111',
-                width: '100%',
-                transition: 'border-color 0.15s',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 textAlign: 'left',
                 cursor: props.disabled ? 'not-allowed' : 'pointer',
+                ...(props.error && highlightOnError ? { borderColor: '#ef4444' } : {}),
               },
-              fieldUi.inputStyle,
               ui?.styles?.input,
               inputPropsStyle,
             )}
@@ -544,21 +498,8 @@ export const WebAsyncAutocompleteField: React.FC<Props> = ({
             className={inputClassName}
             style={mergeStyles(
               {
-                padding: '10px 13px',
-                borderRadius: 8,
-                border: `1.5px solid ${defaultBorderColor(
-                  Boolean(props.error),
-                  highlightOnError,
-                  '#e5e7eb',
-                )}`,
-                fontSize: 14,
-                outline: 'none',
-                background: props.disabled ? '#f9fafb' : '#fff',
-                color: '#111',
-                width: '100%',
-                transition: 'border-color 0.15s',
+                ...(props.error && highlightOnError ? { borderColor: '#ef4444' } : {}),
               },
-              fieldUi.inputStyle,
               ui?.styles?.input,
               inputPropsStyle,
             )}
@@ -662,11 +603,7 @@ export const WebAsyncAutocompleteField: React.FC<Props> = ({
           id={errorId}
           role="alert"
           className={cx(ui?.classNames?.error, errorPropsClassName)}
-          style={mergeStyles(
-            { fontSize: 12, color: '#ef4444' },
-            ui?.styles?.error,
-            errorPropsStyle,
-          )}
+          style={mergeStyles({ color: '#ef4444' }, ui?.styles?.error, errorPropsStyle)}
           {...errorPropsRest}
         >
           {props.error}
@@ -676,11 +613,7 @@ export const WebAsyncAutocompleteField: React.FC<Props> = ({
           id={errorId}
           role="alert"
           className={cx(ui?.classNames?.error, errorPropsClassName)}
-          style={mergeStyles(
-            { fontSize: 12, color: '#ef4444' },
-            ui?.styles?.error,
-            errorPropsStyle,
-          )}
+          style={mergeStyles({ color: '#ef4444' }, ui?.styles?.error, errorPropsStyle)}
           {...errorPropsRest}
         >
           {error}
@@ -689,11 +622,7 @@ export const WebAsyncAutocompleteField: React.FC<Props> = ({
         <span
           id={hintId}
           className={cx(ui?.classNames?.hint, hintPropsClassName)}
-          style={mergeStyles(
-            { fontSize: 12, color: '#9ca3af' },
-            ui?.styles?.hint,
-            hintPropsStyle,
-          )}
+          style={mergeStyles({ color: '#9ca3af' }, ui?.styles?.hint, hintPropsStyle)}
           {...hintPropsRest}
         >
           {props.hint}

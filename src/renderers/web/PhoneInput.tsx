@@ -20,8 +20,12 @@ import {
 } from '../../core/field-builders/phone/countries';
 import type { PhoneDescriptor } from '../../core/field-builders/phone/PhoneFieldBuilder';
 import type { CountryInfo } from '../../core/field-builders/phone/types';
-import type { ExtraFieldProps, FieldRenderProps } from '../../types';
-import { defaultBorderColor, shouldHighlightOnError } from './shared';
+import type { ExtraFieldProps, FieldRenderProps } from '../../types.web';
+import {
+  defaultBorderColor,
+  type ResolvedWebFieldUi,
+  shouldHighlightOnError,
+} from './shared';
 
 type CountryListItem =
   | CountryInfo
@@ -85,22 +89,9 @@ interface PhoneUiOverrides {
 
 interface Props extends FieldRenderProps<PhoneValue | string | null> {
   descriptor: PhoneDescriptor & {
-    _ui?: {
-      id?: string;
-      readOnly?: boolean;
-      autoComplete?: string;
-      autoFocus?: boolean;
-      spellCheck?: boolean;
-      rootClassName?: string;
-      labelClassName?: string;
-      inputClassName?: string;
-      rootStyle?: Record<string, unknown>;
-      labelStyle?: Record<string, unknown>;
-      inputStyle?: Record<string, unknown>;
-      highlightOnError?: boolean;
-    };
+    _ui?: ResolvedWebFieldUi;
   };
-  extra?: ExtraFieldProps;
+  extra?: ExtraFieldProps<PhoneUiOverrides>;
 }
 
 function cx(...values: Array<string | undefined | false | null>) {
@@ -169,10 +160,10 @@ function countryItemStyle(selected: boolean): CSSProperties {
   };
 }
 
-export const WebPhoneInput = ({ descriptor: d, extra, ...props }: Props) => {
+export const PhoneInput = ({ descriptor: d, extra, ...props }: Props) => {
   const defaultCountry = getCountry(d._phoneDefaultCountry) ?? COUNTRIES_SORTED[0];
   const web = d._ui ?? {};
-  const ui = extra?.appearance as PhoneUiOverrides | undefined;
+  const ui = extra?.ui;
   const { rootProps, labelProps, inputProps, searchInputProps, hintProps, errorProps } =
     ui ?? {};
   const {
@@ -337,18 +328,12 @@ export const WebPhoneInput = ({ descriptor: d, extra, ...props }: Props) => {
 
   return (
     <div
-      className={cx(
-        extra?.className,
-        web.rootClassName,
-        ui?.classNames?.root,
-        rootPropsClassName,
-      )}
+      className={cx(extra?.className, ui?.classNames?.root, rootPropsClassName)}
       style={mergeStyles(
-        { display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 16 },
-        extra?.style as CSSProperties | undefined,
-        web.rootStyle,
+        { display: 'flex', flexDirection: 'column', gap: 5 },
+        extra?.style,
         ui?.styles?.root,
-        rootPropsStyle ,
+        rootPropsStyle,
       )}
       {...rootPropsRest}
     >
@@ -362,13 +347,8 @@ export const WebPhoneInput = ({ descriptor: d, extra, ...props }: Props) => {
         ) : (
           <label
             htmlFor={id}
-            className={cx(web.labelClassName, ui?.classNames?.label, labelPropsClassName)}
-            style={mergeStyles(
-              { fontSize: 13, fontWeight: 600, color: '#374151' },
-              web.labelStyle,
-              ui?.styles?.label,
-              labelPropsStyle,
-            )}
+            className={cx(ui?.classNames?.label, labelPropsClassName)}
+            style={mergeStyles(ui?.styles?.label, labelPropsStyle)}
             {...labelPropsRest}
           >
             {props.label}
@@ -458,7 +438,7 @@ export const WebPhoneInput = ({ descriptor: d, extra, ...props }: Props) => {
                         boxSizing: 'border-box',
                       },
                       ui?.styles?.countrySearchInput,
-                      searchInputPropsStyle ,
+                      searchInputPropsStyle,
                     )}
                     {...searchInputPropsRest}
                   />
@@ -553,10 +533,9 @@ export const WebPhoneInput = ({ descriptor: d, extra, ...props }: Props) => {
           onFocus={props.onFocus}
           aria-invalid={hasError || undefined}
           aria-describedby={describedBy}
-          className={cx(web.inputClassName, ui?.classNames?.input, inputPropsClassName)}
+          className={cx(ui?.classNames?.input, inputPropsClassName)}
           style={mergeStyles(
             phoneInputStyle(hasError, Boolean(props.disabled), highlightOnError),
-            web.inputStyle,
             ui?.styles?.input,
             inputPropsStyle,
           )}
@@ -572,7 +551,7 @@ export const WebPhoneInput = ({ descriptor: d, extra, ...props }: Props) => {
               role="alert"
               className={cx(ui?.classNames?.error, errorPropsClassName)}
               style={mergeStyles(
-                { fontSize: 12, color: '#ef4444' },
+                { color: '#ef4444' },
                 ui?.styles?.error,
                 errorPropsStyle,
               )}
@@ -587,7 +566,7 @@ export const WebPhoneInput = ({ descriptor: d, extra, ...props }: Props) => {
                 id={hintId}
                 className={cx(ui?.classNames?.hint, hintPropsClassName)}
                 style={mergeStyles(
-                  { fontSize: 12, color: '#9ca3af' },
+                  { color: '#9ca3af' },
                   ui?.styles?.hint,
                   hintPropsStyle,
                 )}

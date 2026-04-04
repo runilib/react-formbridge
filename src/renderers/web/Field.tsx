@@ -1,45 +1,24 @@
-import {
-  type CSSProperties,
-  type InputHTMLAttributes,
-  useCallback,
-  useId,
-  useMemo,
-  useState,
-} from 'react';
+import { type CSSProperties, useCallback, useId, useMemo, useState } from 'react';
 
 import type {
-  ExtraFieldProps,
   FieldDescriptor,
   FieldRenderProps,
   SelectOption,
   SelectPickerRenderContext,
   WebFieldUiOverrides,
 } from '../../types';
-import { defaultBorderColor, shouldHighlightOnError } from './shared';
-
-type ResolvedWebFieldUi = {
-  id?: string;
-  readOnly?: boolean;
-  autoComplete?: string;
-  autoFocus?: boolean;
-  inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode'];
-  enterKeyHint?: InputHTMLAttributes<HTMLInputElement>['enterKeyHint'];
-  spellCheck?: boolean;
-  rootClassName?: string;
-  inputClassName?: string;
-  labelClassName?: string;
-  rootStyle?: CSSProperties;
-  inputStyle?: CSSProperties;
-  labelStyle?: CSSProperties;
-  renderPicker?: (ctx: SelectPickerRenderContext) => React.ReactNode;
-  highlightOnError?: boolean;
-};
+import type { ExtraFieldProps } from '../../types.web';
+import {
+  defaultBorderColor,
+  type ResolvedWebFieldUi,
+  shouldHighlightOnError,
+} from './shared';
 
 interface Props extends FieldRenderProps<unknown> {
   descriptor: FieldDescriptor<unknown> & {
     _ui?: ResolvedWebFieldUi;
   };
-  extra?: ExtraFieldProps;
+  extra?: ExtraFieldProps<WebFieldUiOverrides>;
 }
 
 function cx(...values: Array<string | undefined | false | null>) {
@@ -95,11 +74,11 @@ function resolveSelectedOption(
   );
 }
 
-export const WebField: React.FC<Props> = ({ descriptor, extra, ...restProps }) => {
+export const Field: React.FC<Props> = ({ descriptor, extra, ...restProps }) => {
   const reactId = useId();
   const fieldUi = descriptor._ui ?? {};
-  const appearance = extra?.appearance as WebFieldUiOverrides | undefined;
-  const { rootProps, labelProps, hintProps, errorProps } = appearance ?? {};
+  const ui = extra?.ui as WebFieldUiOverrides | undefined;
+  const { rootProps, labelProps, hintProps, errorProps } = ui ?? {};
   const {
     className: rootPropsClassName,
     style: rootPropsStyle,
@@ -121,35 +100,26 @@ export const WebField: React.FC<Props> = ({ descriptor, extra, ...restProps }) =
     ...errorPropsRest
   } = errorProps ?? {};
 
-  const id = appearance?.id ?? fieldUi.id ?? `${restProps.name}-${reactId}`;
+  const id = ui?.id ?? fieldUi.id ?? `${restProps.name}-${reactId}`;
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
   const describedBy = restProps.error ? errorId : restProps.hint ? hintId : undefined;
   const required = Boolean(descriptor._required);
   const hasError = Boolean(restProps.error);
   const highlightOnError = shouldHighlightOnError(
-    appearance?.highlightOnError,
+    ui?.highlightOnError,
     fieldUi.highlightOnError,
   );
 
-  const rootClassName = cx(
-    extra?.className,
-    fieldUi.rootClassName,
-    appearance?.classNames?.root,
-    rootPropsClassName,
-  );
-  const labelClassName = cx(
-    fieldUi.labelClassName,
-    appearance?.classNames?.label,
-    labelPropsClassName,
-  );
+  const rootClassName = cx(extra?.className, ui?.classNames?.root, rootPropsClassName);
+  const labelClassName = cx(ui?.classNames?.label, labelPropsClassName);
 
-  const requiredMark = appearance?.renderRequiredMark?.() ?? (
+  const requiredMark = ui?.renderRequiredMark?.() ?? (
     <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>
   );
 
-  const labelNode = appearance?.renderLabel ? (
-    appearance.renderLabel({
+  const labelNode = ui?.renderLabel ? (
+    ui.renderLabel({
       id,
       label: restProps.label,
       required,
@@ -158,12 +128,7 @@ export const WebField: React.FC<Props> = ({ descriptor, extra, ...restProps }) =
     <label
       htmlFor={id}
       className={labelClassName}
-      style={mergeStyles(
-        labelStyle,
-        fieldUi.labelStyle,
-        appearance?.styles?.label,
-        labelPropsStyle,
-      )}
+      style={mergeStyles(ui?.styles?.label, labelPropsStyle)}
       {...labelPropsRest}
     >
       {restProps.label}
@@ -172,29 +137,29 @@ export const WebField: React.FC<Props> = ({ descriptor, extra, ...restProps }) =
   );
 
   const helperNode = restProps.error
-    ? (appearance?.renderError?.({
+    ? (ui?.renderError?.({
         id: errorId,
         error: restProps.error,
       }) ?? (
         <span
           id={errorId}
           role="alert"
-          className={cx(appearance?.classNames?.error, errorPropsClassName)}
-          style={mergeStyles(errorStyle, appearance?.styles?.error, errorPropsStyle)}
+          className={cx(ui?.classNames?.error, errorPropsClassName)}
+          style={mergeStyles(errorStyle, ui?.styles?.error, errorPropsStyle)}
           {...errorPropsRest}
         >
           {restProps.error}
         </span>
       ))
     : restProps.hint
-      ? (appearance?.renderHint?.({
+      ? (ui?.renderHint?.({
           id: hintId,
           hint: restProps.hint,
         }) ?? (
           <span
             id={hintId}
-            className={cx(appearance?.classNames?.hint, hintPropsClassName)}
-            style={mergeStyles(hintStyle, appearance?.styles?.hint, hintPropsStyle)}
+            className={cx(ui?.classNames?.hint, hintPropsClassName)}
+            style={mergeStyles(hintStyle, ui?.styles?.hint, hintPropsStyle)}
             {...hintPropsRest}
           >
             {restProps.hint}
@@ -211,16 +176,13 @@ export const WebField: React.FC<Props> = ({ descriptor, extra, ...restProps }) =
           flexDirection: 'column',
           gap: 5,
         },
-        extra?.style as CSSProperties | undefined,
-        fieldUi.rootStyle,
-        appearance?.styles?.root,
+        extra?.style,
+        ui?.styles?.root,
         rootPropsStyle,
       )}
       {...rootPropsRest}
     >
-      {!appearance?.hideLabel &&
-      descriptor._type !== 'checkbox' &&
-      descriptor._type !== 'switch'
+      {!ui?.hideLabel && descriptor._type !== 'checkbox' && descriptor._type !== 'switch'
         ? labelNode
         : null}
 
@@ -244,10 +206,10 @@ function renderInput(
     describedBy?: string;
     hasError: boolean;
     highlightOnError: boolean;
-    extra?: ExtraFieldProps;
+    extra?: ExtraFieldProps<WebFieldUiOverrides>;
   },
 ) {
-  const ui = ctx.extra?.appearance as WebFieldUiOverrides | undefined;
+  const ui = ctx.extra?.ui as WebFieldUiOverrides | undefined;
   const fieldUi = d._ui ?? {};
   const { inputProps, textareaProps, selectProps } = ui ?? {};
   const {
@@ -285,28 +247,10 @@ function renderInput(
     onFocus: restProps.onFocus,
   };
 
-  const baseInput: CSSProperties = {
-    padding: '10px 13px',
-    borderRadius: 8,
-    border: `1.5px solid ${defaultBorderColor(
-      ctx.hasError,
-      ctx.highlightOnError,
-      '#e5e7eb',
-    )}`,
-    fontSize: 14,
-    outline: 'none',
-    background: restProps.disabled ? '#f9fafb' : '#fff',
-    color: '#111',
-    width: '100%',
-    transition: 'border-color 0.15s',
-    cursor: restProps.disabled ? 'not-allowed' : 'text',
-  };
+  const baseInput: CSSProperties | undefined =
+    ctx.hasError && ctx.highlightOnError ? { borderColor: '#ef4444' } : undefined;
 
-  const inputClassName = cx(
-    fieldUi.inputClassName,
-    ui?.classNames?.input,
-    inputPropsClassName,
-  );
+  const inputClassName = cx(ui?.classNames?.input, inputPropsClassName);
   const renderPicker = ui?.renderPicker ?? fieldUi.renderPicker;
 
   switch (d._type) {
@@ -321,7 +265,6 @@ function renderInput(
           style={mergeStyles(
             baseInput,
             { resize: 'vertical' },
-            fieldUi.inputStyle,
             ui?.styles?.textarea,
             textareaPropsStyle,
           )}
@@ -353,7 +296,6 @@ function renderInput(
               {
                 width: 18,
                 height: 18,
-                accentColor: '#6366f1',
                 cursor: 'inherit',
               },
               ui?.styles?.checkboxInput,
@@ -363,10 +305,7 @@ function renderInput(
           />
           <span
             className={ui?.classNames?.checkboxLabel}
-            style={mergeStyles(
-              { fontSize: 14, color: '#374151' },
-              ui?.styles?.checkboxLabel,
-            )}
+            style={mergeStyles(ui?.styles?.checkboxLabel)}
           >
             {restProps.label}
           </span>
@@ -444,8 +383,7 @@ function renderInput(
             name={restProps.name}
             value={String(Boolean(restProps.value))}
           />
-
-          <span style={{ fontSize: 14, color: '#374151' }}>{restProps.label}</span>
+          <span>{restProps.label}</span>
         </div>
       );
 
@@ -469,12 +407,7 @@ function renderInput(
           {...commonInputProps}
           value={toInputValue(restProps.value)}
           className={cx(inputClassName, ui?.classNames?.select)}
-          style={mergeStyles(
-            baseInput,
-            fieldUi.inputStyle,
-            ui?.styles?.select,
-            selectPropsStyle,
-          )}
+          style={mergeStyles(baseInput, ui?.styles?.select, selectPropsStyle)}
           onChange={(e) => restProps.onChange(e.target.value)}
           {...selectPropsRest}
         >
@@ -524,10 +457,9 @@ function renderInput(
                 value={String(o.value)}
                 checked={String(restProps.value ?? '') === String(o.value)}
                 onChange={() => restProps.onChange(o.value)}
-                style={{ accentColor: '#6366f1' }}
                 {...inputPropsRest}
               />
-              <span style={{ fontSize: 14, color: '#374151' }}>{o.label}</span>
+              <span>{o.label}</span>
             </label>
           ))}
         </div>
@@ -603,18 +535,17 @@ function renderInput(
           {...commonInputProps}
           type="number"
           name={restProps.name}
-          value={restProps.value === null || restProps.value === undefined ? '' : String(restProps.value)}
+          value={
+            restProps.value === null || restProps.value === undefined
+              ? ''
+              : String(restProps.value)
+          }
           placeholder={restProps.placeholder}
           min={typeof d._min === 'number' ? d._min : undefined}
           max={typeof d._max === 'number' ? d._max : undefined}
           step={(d as Props['descriptor'] & { _step?: number })._step}
           className={inputClassName}
-          style={mergeStyles(
-            baseInput,
-            fieldUi.inputStyle,
-            ui?.styles?.input,
-            inputPropsStyle,
-          )}
+          style={mergeStyles(baseInput, ui?.styles?.input, inputPropsStyle)}
           onChange={(e) => {
             const raw = e.target.value;
             restProps.onChange(raw === '' ? '' : Number(raw));
@@ -631,12 +562,7 @@ function renderInput(
           name={restProps.name}
           value={toInputValue(restProps.value)}
           className={inputClassName}
-          style={mergeStyles(
-            baseInput,
-            fieldUi.inputStyle,
-            ui?.styles?.input,
-            inputPropsStyle,
-          )}
+          style={mergeStyles(baseInput, ui?.styles?.input, inputPropsStyle)}
           onChange={(e) => restProps.onChange(e.target.value)}
           {...inputPropsRest}
         />
@@ -655,12 +581,7 @@ function renderInput(
             maxLength={typeof d._max === 'number' ? d._max : undefined}
             pattern={toHtmlPatternSource(d)}
             className={inputClassName}
-            style={mergeStyles(
-              baseInput,
-              fieldUi.inputStyle,
-              ui?.styles?.input,
-              inputPropsStyle,
-            )}
+            style={mergeStyles(baseInput, ui?.styles?.input, inputPropsStyle)}
             onChange={(e) => restProps.onChange(e.target.value)}
             {...inputPropsRest}
           />
@@ -702,7 +623,7 @@ const WebPickerSelectField = ({
   fieldProps: FieldRenderProps<unknown>;
   web: ResolvedWebFieldUi;
   ui: WebFieldUiOverrides | undefined;
-  baseInput: CSSProperties;
+  baseInput?: CSSProperties;
   inputClassName?: string;
   selectPropsStyle?: CSSProperties;
   hasError: boolean;
@@ -830,7 +751,6 @@ const WebPickerSelectField = ({
             textAlign: 'left',
             cursor: fieldProps.disabled ? 'not-allowed' : 'pointer',
           },
-          web.inputStyle,
           ui?.styles?.select,
           selectPropsStyle,
         )}
@@ -865,21 +785,10 @@ const WebPickerSelectField = ({
   );
 };
 
-const labelStyle: CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: '#374151',
-};
-
 const errorStyle: CSSProperties = {
-  fontSize: 12,
   color: '#ef4444',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 4,
 };
 
 const hintStyle: CSSProperties = {
-  fontSize: 12,
   color: '#9ca3af',
 };

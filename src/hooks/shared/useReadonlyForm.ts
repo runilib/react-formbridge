@@ -119,7 +119,9 @@ function normalizeDescriptors<S extends FormSchema>(
   const result: Record<string, FieldDescriptor<unknown>> = {};
 
   for (const [key, value] of Object.entries(schema)) {
-    result[key] = isFieldBuilder(value) ? value._build() : value;
+    result[key] = isFieldBuilder(value)
+      ? value._build()
+      : (value as FieldDescriptor<unknown>);
   }
 
   return result;
@@ -251,9 +253,9 @@ export function useReadonlyFormBridge<S extends FormSchema>(
           display,
         };
 
-        const { WebReadonlyField } = require('../../renderers/web/WebReadonlyField');
+        const { ReadonlyField } = require('../../renderers/web/ReadonlyField');
 
-        return React.createElement(WebReadonlyField, {
+        return React.createElement(ReadonlyField, {
           state: nextState,
           showDiff,
           props,

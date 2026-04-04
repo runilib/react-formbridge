@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import type {
   FieldReadonlyState,
   ReadonlyFieldProps,
-} from '../../hooks/shared/useReadonlyFormBridge';
+} from '../../hooks/shared/useReadonlyForm';
 
 interface Props {
   state: FieldReadonlyState;
@@ -11,14 +11,13 @@ interface Props {
   props?: ReadonlyFieldProps;
 }
 
-export const WebReadonlyField = ({ state, showDiff, props: extraProps }: Props) => {
+export const ReadonlyField = ({ state, showDiff, props: extraProps }: Props) => {
   const { label, display, changed, originalDisplay } = state;
 
   return (
     <div
       className={extraProps?.className}
       style={{
-        marginBottom: 16,
         ...(extraProps?.style as CSSProperties),
       }}
     >

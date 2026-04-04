@@ -14,8 +14,13 @@ import React, {
 
 import type { BuiltFileDescriptor } from '../../core/field-builders/file/FileField';
 import type { FileValue } from '../../core/field-builders/file/types';
-import type { ExtraFieldProps, FieldRenderProps } from '../../types';
-import { defaultBorderColor, shouldHighlightOnError } from './shared';
+import type { FieldRenderProps } from '../../types';
+import type { ExtraFieldProps } from '../../types.web';
+import {
+  defaultBorderColor,
+  type ResolvedWebFieldUi,
+  shouldHighlightOnError,
+} from './shared';
 
 type FileSlot =
   | 'root'
@@ -66,20 +71,9 @@ interface FileUiOverrides {
 
 interface Props extends FieldRenderProps<FileValue | FileValue[] | null> {
   descriptor: BuiltFileDescriptor & {
-    _ui?: {
-      id?: string;
-      readOnly?: boolean;
-      autoFocus?: boolean;
-      rootClassName?: string;
-      labelClassName?: string;
-      inputClassName?: string;
-      rootStyle?: Record<string, unknown>;
-      labelStyle?: Record<string, unknown>;
-      inputStyle?: Record<string, unknown>;
-      highlightOnError?: boolean;
-    };
+    _ui?: ResolvedWebFieldUi;
   };
-  extra?: ExtraFieldProps;
+  extra?: ExtraFieldProps<FileUiOverrides>;
 }
 
 function cx(...values: Array<string | undefined | false | null>) {
@@ -148,7 +142,7 @@ function getDefaultFileIcon(file: FileValue): ReactNode {
   return '📎';
 }
 
-export const WebFileField = ({ descriptor: d, extra, ...props }: Props) => {
+export const FileField = ({ descriptor: d, extra, ...props }: Props) => {
   const reactId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const createdUrisRef = useRef<Set<string>>(new Set());
@@ -157,7 +151,7 @@ export const WebFileField = ({ descriptor: d, extra, ...props }: Props) => {
   const [loading, setLoading] = useState(false);
 
   const web = d._ui ?? {};
-  const ui = extra?.appearance as FileUiOverrides | undefined;
+  const ui = extra?.ui as FileUiOverrides | undefined;
   const { rootProps, labelProps, hintProps, errorProps } = ui ?? {};
   const {
     className: rootPropsClassName,
@@ -296,25 +290,15 @@ export const WebFileField = ({ descriptor: d, extra, ...props }: Props) => {
     <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>
   );
 
-  const rootClassName = cx(
-    extra?.className,
-    web.rootClassName,
-    ui?.classNames?.root,
-    rootPropsClassName,
-  );
-  const labelClassName = cx(
-    web.labelClassName,
-    ui?.classNames?.label,
-    labelPropsClassName,
-  );
+  const rootClassName = cx(extra?.className, ui?.classNames?.root, rootPropsClassName);
+  const labelClassName = cx(ui?.classNames?.label, labelPropsClassName);
 
   return (
     <div
       className={rootClassName}
       style={mergeStyles(
-        { marginBottom: 16 },
-        extra?.style as CSSProperties | undefined,
-        web.rootStyle,
+        { display: 'flex', flexDirection: 'column', gap: 5 },
+        extra?.style,
         ui?.styles?.root,
         rootPropsStyle,
       )}
@@ -331,18 +315,7 @@ export const WebFileField = ({ descriptor: d, extra, ...props }: Props) => {
           <label
             htmlFor={id}
             className={labelClassName}
-            style={mergeStyles(
-              {
-                fontSize: 13,
-                fontWeight: 600,
-                color: '#374151',
-                display: 'block',
-                marginBottom: 6,
-              },
-              web.labelStyle,
-              ui?.styles?.label,
-              labelPropsStyle,
-            )}
+            style={mergeStyles(ui?.styles?.label, labelPropsStyle)}
             {...labelPropsRest}
           >
             {props.label}
@@ -653,7 +626,7 @@ export const WebFileField = ({ descriptor: d, extra, ...props }: Props) => {
               role="alert"
               className={cx(ui?.classNames?.error, errorPropsClassName)}
               style={mergeStyles(
-                { fontSize: 12, color: '#ef4444', marginTop: 6 },
+                { color: '#ef4444', margin: 0 },
                 ui?.styles?.error,
                 errorPropsStyle,
               )}
@@ -668,7 +641,7 @@ export const WebFileField = ({ descriptor: d, extra, ...props }: Props) => {
                 id={hintId}
                 className={cx(ui?.classNames?.hint, hintPropsClassName)}
                 style={mergeStyles(
-                  { fontSize: 12, color: '#9ca3af', marginTop: 4 },
+                  { color: '#9ca3af', margin: 0 },
                   ui?.styles?.hint,
                   hintPropsStyle,
                 )}

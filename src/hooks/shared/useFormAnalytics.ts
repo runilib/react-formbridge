@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * formura — Form Analytics
+ * react-formbridge — Form Analytics
  * ────────────────────────
  * Tracks field interactions, timing, validation, abandonment and completion.
  *
@@ -20,9 +20,9 @@ import { useEffect, useRef } from 'react';
 /* -------------------------------------------------------------------------- */
 
 /**
- * Callbacks invoked by the analytics tracker.
+ * Handlers invoked by the analytics tracker.
  */
-export interface AnalyticsCallbacks {
+export interface AnalyticsHandlers {
   /**
    * Called when a field receives focus.
    */
@@ -100,9 +100,9 @@ export interface AnalyticsCallbacks {
  */
 export interface AnalyticsOptions {
   /**
-   * Analytics callbacks.
+   * Analytics handlers.
    */
-  callbacks: AnalyticsCallbacks;
+  handlers: AnalyticsHandlers;
 
   /**
    * Field names to exclude from all tracking.
@@ -155,7 +155,7 @@ function isAnalyticsEmptyValue(value: unknown): boolean {
   if (typeof value === 'object') {
     const record = value as Record<string, unknown>;
 
-    // Common formura structured values
+    // Common react-formbridge structured values
     if ('e164' in record && typeof record.e164 === 'string') {
       return record.e164.trim() === '';
     }
@@ -199,7 +199,7 @@ function filterExcludedFields(
  * Platform listeners are attached later through `attachLifecycleTracking()`.
  */
 export class FormAnalyticsTracker {
-  private readonly callbacks: AnalyticsCallbacks;
+  private readonly handlers: AnalyticsHandlers;
   private readonly exclude: Set<string>;
   private readonly formId?: string;
 
@@ -221,7 +221,7 @@ export class FormAnalyticsTracker {
    * Creates a tracker instance.
    */
   constructor(opts: AnalyticsOptions) {
-    this.callbacks = opts.callbacks;
+    this.handlers = opts.handlers;
     this.exclude = new Set([...DEFAULT_EXCLUDED_FIELDS, ...(opts.exclude ?? [])]);
     this.formId = opts.formId;
   }
@@ -297,7 +297,7 @@ export class FormAnalyticsTracker {
 
     this.lastField = name;
     this.fieldFocusMs[name] = Date.now();
-    this.callbacks.onFieldFocus?.(name);
+    this.handlers.onFieldFocus?.(name);
   }
 
   /**
@@ -312,9 +312,9 @@ export class FormAnalyticsTracker {
 
     if (focusStartedAt) {
       if (isEmpty) {
-        this.callbacks.onFieldAbandoned?.(name, value);
+        this.handlers.onFieldAbandoned?.(name, value);
       } else {
-        this.callbacks.onFieldComplete?.(name, durationMs);
+        this.handlers.onFieldComplete?.(name, durationMs);
       }
     }
 
@@ -328,7 +328,7 @@ export class FormAnalyticsTracker {
     if (this.exclude.has(name)) return;
 
     this.fieldChanges[name] = (this.fieldChanges[name] ?? 0) + 1;
-    this.callbacks.onFieldChange?.(name, this.fieldChanges[name]);
+    this.handlers.onFieldChange?.(name, this.fieldChanges[name]);
   }
 
   /**
@@ -341,7 +341,7 @@ export class FormAnalyticsTracker {
     if (previous === error) return;
 
     this.fieldErrors[name] = error;
-    this.callbacks.onFieldError?.(name, error);
+    this.handlers.onFieldError?.(name, error);
   }
 
   /**
@@ -352,7 +352,7 @@ export class FormAnalyticsTracker {
     if (!(name in this.fieldErrors)) return;
 
     delete this.fieldErrors[name];
-    this.callbacks.onFieldErrorFixed?.(name);
+    this.handlers.onFieldErrorFixed?.(name);
   }
 
   /**
@@ -363,7 +363,7 @@ export class FormAnalyticsTracker {
       Object.entries(errors).filter(([key]) => !this.exclude.has(key)),
     );
 
-    this.callbacks.onFormError?.(filtered, submitCount);
+    this.handlers.onFormError?.(filtered, submitCount);
   }
 
   /**
@@ -374,7 +374,7 @@ export class FormAnalyticsTracker {
     this.didReportAbandonment = true;
 
     const durationMs = Date.now() - this.formStartMs;
-    this.callbacks.onFormCompleted?.(durationMs, submitCount, fieldCount);
+    this.handlers.onFormCompleted?.(durationMs, submitCount, fieldCount);
 
     this.destroy();
   }
@@ -409,7 +409,7 @@ export class FormAnalyticsTracker {
 
     if (completion > 0 && completion < 100) {
       this.didReportAbandonment = true;
-      this.callbacks.onFormAbandoned?.(completion, this.lastField, filteredValues);
+      this.handlers.onFormAbandoned?.(completion, this.lastField, filteredValues);
     }
   }
 
@@ -442,7 +442,7 @@ export class FormAnalyticsTracker {
  * const analytics = useFormBridgeAnalytics(
  *   {
  *     formId: 'signup',
- *     callbacks: {
+ *     handlers: {
  *       onFieldFocus: (name) => console.log('focus', name),
  *       onFormCompleted: (duration, submitCount) => {
  *         console.log('completed', { duration, submitCount });

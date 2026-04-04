@@ -9,8 +9,8 @@ import React, {
 
 import type { PasswordStrengthMeta } from '../../core/field-builders/password/PasswordWithStrength';
 import { scorePassword } from '../../core/field-builders/password/strength';
-import type { ExtraFieldProps, FieldRenderProps } from '../../types';
-import { defaultBorderColor, shouldHighlightOnError } from './shared';
+import type { ExtraFieldProps, FieldRenderProps } from '../../types.web';
+import { type ResolvedWebFieldUi, shouldHighlightOnError } from './shared';
 
 type PasswordStrengthSlot =
   | 'root'
@@ -66,22 +66,9 @@ interface PasswordStrengthUiOverrides {
 
 interface Props extends FieldRenderProps<string> {
   strengthMeta: PasswordStrengthMeta & {
-    _ui?: {
-      id?: string;
-      readOnly?: boolean;
-      autoComplete?: string;
-      autoFocus?: boolean;
-      spellCheck?: boolean;
-      rootClassName?: string;
-      labelClassName?: string;
-      inputClassName?: string;
-      rootStyle?: Record<string, unknown>;
-      labelStyle?: Record<string, unknown>;
-      inputStyle?: Record<string, unknown>;
-      highlightOnError?: boolean;
-    };
+    _ui?: ResolvedWebFieldUi;
   };
-  extra?: ExtraFieldProps;
+  extra?: ExtraFieldProps<PasswordStrengthUiOverrides>;
 }
 
 function cx(...values: Array<string | undefined | false | null>) {
@@ -94,14 +81,14 @@ function mergeStyles(
   return Object.assign({}, ...styles.filter(Boolean));
 }
 
-export const WebPasswordStrength = ({ strengthMeta: meta, extra, ...props }: Props) => {
+export const PasswordStrength = ({ strengthMeta: meta, extra, ...props }: Props) => {
   const required = Boolean(
     (meta as PasswordStrengthMeta & { _required?: boolean })._required,
   );
   const [show, setShow] = useState(false);
   const hasError = Boolean(props.error);
   const web = meta._ui ?? {};
-  const ui = extra?.appearance as PasswordStrengthUiOverrides | undefined;
+  const ui = extra?.ui;
   const highlightOnError = shouldHighlightOnError(
     ui?.highlightOnError,
     web.highlightOnError,
@@ -154,16 +141,10 @@ export const WebPasswordStrength = ({ strengthMeta: meta, extra, ...props }: Pro
 
   return (
     <div
-      className={cx(
-        extra?.className,
-        web.rootClassName,
-        ui?.classNames?.root,
-        rootPropsClassName,
-      )}
+      className={cx(extra?.className, ui?.classNames?.root, rootPropsClassName)}
       style={mergeStyles(
-        { display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 16 },
-        extra?.style as CSSProperties | undefined,
-        web.rootStyle,
+        { display: 'flex', flexDirection: 'column', gap: 5 },
+        extra?.style,
         ui?.styles?.root,
         rootPropsStyle,
       )}
@@ -179,13 +160,8 @@ export const WebPasswordStrength = ({ strengthMeta: meta, extra, ...props }: Pro
         ) : (
           <label
             htmlFor={props.name}
-            className={cx(web.labelClassName, ui?.classNames?.label, labelPropsClassName)}
-            style={mergeStyles(
-              { fontSize: 13, fontWeight: 600, color: '#374151' },
-              web.labelStyle,
-              ui?.styles?.label,
-              labelPropsStyle,
-            )}
+            className={cx(ui?.classNames?.label, labelPropsClassName)}
+            style={mergeStyles(ui?.styles?.label, labelPropsStyle)}
             {...labelPropsRest}
           >
             {props.label}
@@ -209,26 +185,17 @@ export const WebPasswordStrength = ({ strengthMeta: meta, extra, ...props }: Pro
           onChange={(event) => props.onChange(event.target.value)}
           onBlur={props.onBlur}
           onFocus={props.onFocus}
-          className={cx(web.inputClassName, ui?.classNames?.input, inputPropsClassName)}
+          className={cx(ui?.classNames?.input, inputPropsClassName)}
           style={mergeStyles(
             {
-              padding: '10px 13px',
-              borderRadius: 8,
-              border: `1.5px solid ${defaultBorderColor(
-                hasError,
-                highlightOnError,
-                result?.acceptable === false && props.value ? '#f97316' : '#e5e7eb',
-              )}`,
-              fontSize: 14,
-              outline: 'none',
-              background: props.disabled ? '#f9fafb' : '#fff',
-              color: '#111',
-              width: '100%',
               paddingRight: '44px',
-              transition: 'border-color 0.15s',
               boxSizing: 'border-box',
+              ...(hasError && highlightOnError
+                ? { borderColor: '#ef4444' }
+                : result?.acceptable === false && props.value
+                  ? { borderColor: '#f97316' }
+                  : {}),
             },
-            web.inputStyle,
             ui?.styles?.input,
             inputPropsStyle,
           )}
@@ -383,7 +350,7 @@ export const WebPasswordStrength = ({ strengthMeta: meta, extra, ...props }: Pro
               role="alert"
               className={cx(ui?.classNames?.error, errorPropsClassName)}
               style={mergeStyles(
-                { fontSize: 12, color: '#ef4444' },
+                { color: '#ef4444' },
                 ui?.styles?.error,
                 errorPropsStyle,
               )}
@@ -397,7 +364,7 @@ export const WebPasswordStrength = ({ strengthMeta: meta, extra, ...props }: Pro
               <span
                 className={cx(ui?.classNames?.hint, hintPropsClassName)}
                 style={mergeStyles(
-                  { fontSize: 12, color: '#9ca3af' },
+                  { color: '#9ca3af' },
                   ui?.styles?.hint,
                   hintPropsStyle,
                 )}

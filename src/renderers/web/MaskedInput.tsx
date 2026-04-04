@@ -19,8 +19,8 @@ import {
   parsePattern,
 } from '../../core/field-builders/mask/masks';
 import type { MaskedDescriptor } from '../../core/field-builders/mask/types';
-import type { ExtraFieldProps, FieldRenderProps } from '../../types';
-import { defaultBorderColor, shouldHighlightOnError } from './shared';
+import type { ExtraFieldProps, FieldRenderProps } from '../../types.web';
+import { type ResolvedWebFieldUi, shouldHighlightOnError } from './shared';
 
 type MaskedSlot = 'root' | 'label' | 'input' | 'error' | 'hint' | 'requiredMark';
 
@@ -58,22 +58,9 @@ interface MaskedUiOverrides {
 
 interface Props extends FieldRenderProps<string> {
   descriptor: MaskedDescriptor<string> & {
-    _ui?: {
-      id?: string;
-      readOnly?: boolean;
-      autoComplete?: string;
-      autoFocus?: boolean;
-      spellCheck?: boolean;
-      rootClassName?: string;
-      labelClassName?: string;
-      inputClassName?: string;
-      rootStyle?: Record<string, unknown>;
-      labelStyle?: Record<string, unknown>;
-      inputStyle?: Record<string, unknown>;
-      highlightOnError?: boolean;
-    };
+    _ui?: ResolvedWebFieldUi;
   };
-  extra?: ExtraFieldProps;
+  extra?: ExtraFieldProps<MaskedUiOverrides>;
 }
 
 function cx(...values: Array<string | undefined | false | null>) {
@@ -96,13 +83,13 @@ function getMaskInputMode(
   return hasLetters ? 'text' : 'numeric';
 }
 
-export const WebMaskedInput: React.FC<Props> = ({ descriptor: d, extra, ...props }) => {
+export const MaskedInput: React.FC<Props> = ({ descriptor: d, extra, ...props }) => {
   const reactId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingCaretRef = useRef<{ start: number; end: number } | null>(null);
 
   const web = d._ui ?? {};
-  const ui = extra?.appearance as MaskedUiOverrides | undefined;
+  const ui = extra?.ui as MaskedUiOverrides | undefined;
   const { rootProps, labelProps, inputProps, hintProps, errorProps } = ui ?? {};
   const {
     className: rootPropsClassName,
@@ -328,22 +315,9 @@ export const WebMaskedInput: React.FC<Props> = ({ descriptor: d, extra, ...props
     </span>
   );
 
-  const inputClassName = cx(
-    web.inputClassName,
-    ui?.classNames?.input,
-    inputPropsClassName,
-  );
-  const labelClassName = cx(
-    web.labelClassName,
-    ui?.classNames?.label,
-    labelPropsClassName,
-  );
-  const rootClassName = cx(
-    extra?.className,
-    web.rootClassName,
-    ui?.classNames?.root,
-    rootPropsClassName,
-  );
+  const inputClassName = cx(ui?.classNames?.input, inputPropsClassName);
+  const labelClassName = cx(ui?.classNames?.label, labelPropsClassName);
+  const rootClassName = cx(extra?.className, ui?.classNames?.root, rootPropsClassName);
 
   const autoLayout = useMemo(
     () => getMaskAutoLayout(d._maskPattern, d._maskTokens),
@@ -354,9 +328,8 @@ export const WebMaskedInput: React.FC<Props> = ({ descriptor: d, extra, ...props
     <div
       className={rootClassName}
       style={mergeStyles(
-        { display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 16 },
-        extra?.style as CSSProperties | undefined,
-        web.rootStyle,
+        { display: 'flex', flexDirection: 'column', gap: 5 },
+        extra?.style,
         ui?.styles?.root,
         rootPropsStyle,
       )}
@@ -373,12 +346,7 @@ export const WebMaskedInput: React.FC<Props> = ({ descriptor: d, extra, ...props
           <label
             htmlFor={id}
             className={labelClassName}
-            style={mergeStyles(
-              { fontSize: 13, fontWeight: 600, color: '#374151' },
-              web.labelStyle,
-              ui?.styles?.label,
-              labelPropsStyle,
-            )}
+            style={mergeStyles(ui?.styles?.label, labelPropsStyle)}
             {...labelPropsRest}
           >
             {props.label}
@@ -413,23 +381,11 @@ export const WebMaskedInput: React.FC<Props> = ({ descriptor: d, extra, ...props
         onKeyDown={handleKeyDown}
         style={mergeStyles(
           {
-            padding: '10px 13px',
-            borderRadius: 8,
-            border: `1.5px solid ${defaultBorderColor(
-              hasError,
-              highlightOnError,
-              '#e5e7eb',
-            )}`,
-            fontSize: 14,
-            outline: 'none',
-            background: props.disabled ? '#f9fafb' : '#fff',
-            color: '#111',
             fontFamily: 'monospace',
             letterSpacing: '0.06em',
-            transition: 'border-color 0.15s',
-            cursor: props.disabled ? 'not-allowed' : 'text',
             boxSizing: 'border-box',
             fontVariantNumeric: 'tabular-nums',
+            ...(hasError && highlightOnError ? { borderColor: '#ef4444' } : {}),
             ...(autoLayout.compact
               ? {
                   width: `min(100%, ${autoLayout.webWidthCh}ch)`,
@@ -437,11 +393,8 @@ export const WebMaskedInput: React.FC<Props> = ({ descriptor: d, extra, ...props
                   maxWidth: '100%',
                   alignSelf: 'flex-start',
                 }
-              : {
-                  width: '100%',
-                }),
+              : {}),
           },
-          web.inputStyle,
           ui?.styles?.input,
           inputPropsStyle,
         )}
@@ -455,7 +408,7 @@ export const WebMaskedInput: React.FC<Props> = ({ descriptor: d, extra, ...props
               role="alert"
               className={cx(ui?.classNames?.error, errorPropsClassName)}
               style={mergeStyles(
-                { fontSize: 12, color: '#ef4444' },
+                { color: '#ef4444' },
                 ui?.styles?.error,
                 errorPropsStyle,
               )}
@@ -470,7 +423,7 @@ export const WebMaskedInput: React.FC<Props> = ({ descriptor: d, extra, ...props
                 id={hintId}
                 className={cx(ui?.classNames?.hint, hintPropsClassName)}
                 style={mergeStyles(
-                  { fontSize: 12, color: '#9ca3af' },
+                  { color: '#9ca3af' },
                   ui?.styles?.hint,
                   hintPropsStyle,
                 )}

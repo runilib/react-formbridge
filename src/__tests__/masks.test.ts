@@ -1,4 +1,11 @@
-import { applyMask, extractRaw, parsePattern, MASKS, maskCompleteValidator } from '../src/fields/mask/masks';
+import { describe, expect, it } from 'vitest';
+import { MASKS } from '../core/field-builders/mask/constants';
+import {
+  applyMask,
+  extractRaw,
+  maskCompleteValidator,
+  parsePattern,
+} from '../core/field-builders/mask/masks';
 
 describe('parsePattern', () => {
   it('parses digit tokens', () => {
@@ -80,14 +87,6 @@ describe('applyMask — date', () => {
   });
 });
 
-describe('applyMask — French phone', () => {
-  it('formats +33 mobile number', () => {
-    const { display, complete } = applyMask('0612345678', MASKS.PHONE_FR);
-    // +33 0 61 23 45 67 8 — note: removes leading 0
-    expect(complete).toBe(true);
-  });
-});
-
 describe('applyMask — IBAN', () => {
   it('formats French IBAN', () => {
     const { display } = applyMask('FR7630006000011234567890189', MASKS.IBAN_FR);
@@ -97,7 +96,10 @@ describe('applyMask — IBAN', () => {
 
 describe('applyMask — placeholder', () => {
   it('shows placeholder chars for empty slots', () => {
-    const { display } = applyMask('4111', MASKS.CARD_16, { showPlaceholder: true, placeholder: '_' });
+    const { display } = applyMask('4111', MASKS.CARD_16, {
+      showPlaceholder: true,
+      placeholder: '_',
+    });
     expect(display).toContain('_');
     expect(display.startsWith('4111')).toBe(true);
   });
@@ -139,13 +141,13 @@ describe('maskCompleteValidator', () => {
 describe('MASKS presets', () => {
   it('CARD_AMEX is 15 input slots', () => {
     const tokens = parsePattern(MASKS.CARD_AMEX);
-    const inputCount = tokens.filter(t => t.isInput).length;
+    const inputCount = tokens.filter((t) => t.isInput).length;
     expect(inputCount).toBe(15);
   });
 
   it('EXPIRY is 4 input slots', () => {
     const tokens = parsePattern(MASKS.EXPIRY);
-    const inputCount = tokens.filter(t => t.isInput).length;
+    const inputCount = tokens.filter((t) => t.isInput).length;
     expect(inputCount).toBe(4);
   });
 

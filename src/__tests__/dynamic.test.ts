@@ -1,16 +1,32 @@
-import { parseDynamicForm, parseJsonSchema } from '../formly-extra-v1/src/builders/dynamic';
-import type { JsonFormDefinition } from '../formly-extra-v1/src/builders/dynamic';
+import { describe, expect, it } from 'vitest';
+import {
+  parseDynamicForm,
+  parseJsonSchema,
+} from '../core/field-builders/dynamic/dynamic';
+import type { JsonFormDefinition } from '../index.native';
 
 const SIMPLE_DEF: JsonFormDefinition = {
-  id:    'contact',
+  id: 'contact',
   title: 'Contact us',
   submitLabel: 'Send',
   fields: [
-    { name: 'name',    type: 'text',     label: 'Your name',    required: true, order: 1 },
-    { name: 'email',   type: 'email',    label: 'Email address',required: true, order: 2 },
-    { name: 'message', type: 'textarea', label: 'Message',       required: true, min: 10, order: 3 },
-    { name: 'topic',   type: 'select',   label: 'Topic',
-      options: ['Support', 'Sales', 'Other'], order: 4 },
+    { name: 'name', type: 'text', label: 'Your name', required: true, order: 1 },
+    { name: 'email', type: 'email', label: 'Email address', required: true, order: 2 },
+    {
+      name: 'message',
+      type: 'textarea',
+      label: 'Message',
+      required: true,
+      min: 10,
+      order: 3,
+    },
+    {
+      name: 'topic',
+      type: 'select',
+      label: 'Topic',
+      options: ['Support', 'Sales', 'Other'],
+      order: 4,
+    },
     { name: 'newsletter', type: 'switch', label: 'Subscribe to newsletter', order: 5 },
   ],
 };
@@ -18,7 +34,13 @@ const SIMPLE_DEF: JsonFormDefinition = {
 describe('parseDynamicForm', () => {
   it('creates a schema with all field names', () => {
     const { schema } = parseDynamicForm(SIMPLE_DEF);
-    expect(Object.keys(schema)).toEqual(['name', 'email', 'message', 'topic', 'newsletter']);
+    expect(Object.keys(schema)).toEqual([
+      'name',
+      'email',
+      'message',
+      'topic',
+      'newsletter',
+    ]);
   });
 
   it('preserves field types', () => {
@@ -51,8 +73,8 @@ describe('parseDynamicForm', () => {
     const { schema } = parseDynamicForm(SIMPLE_DEF);
     expect(schema.topic._options).toEqual([
       { label: 'Support', value: 'Support' },
-      { label: 'Sales',   value: 'Sales'   },
-      { label: 'Other',   value: 'Other'   },
+      { label: 'Sales', value: 'Sales' },
+      { label: 'Other', value: 'Other' },
     ]);
   });
 
@@ -83,9 +105,13 @@ describe('parseDynamicForm', () => {
   it('extracts showWhen conditions', () => {
     const def: JsonFormDefinition = {
       fields: [
-        { name: 'type',  type: 'select', label: 'Type', options: ['a','b'] },
-        { name: 'extra', type: 'text',   label: 'Extra',
-          showWhen: { field: 'type', value: 'b' } },
+        { name: 'type', type: 'select', label: 'Type', options: ['a', 'b'] },
+        {
+          name: 'extra',
+          type: 'text',
+          label: 'Extra',
+          showWhen: { field: 'type', value: 'b' },
+        },
       ],
     };
     const { conditions } = parseDynamicForm(def);
@@ -94,11 +120,13 @@ describe('parseDynamicForm', () => {
   });
 
   it('applies JSON validation rules', async () => {
-    const { validateField } = await import('../src/validators/engine');
+    const { validateField } = await import('../core/validators/engine');
     const def: JsonFormDefinition = {
       fields: [
         {
-          name: 'code', type: 'text', label: 'Code',
+          name: 'code',
+          type: 'text',
+          label: 'Code',
           validate: [
             { type: 'required', message: 'Code is required.' },
             { type: 'min', value: 4, message: 'Min 4 chars.' },
@@ -130,25 +158,42 @@ describe('parseJsonSchema', () => {
     title: 'User',
     required: ['name', 'email'],
     properties: {
-      name:    { type: 'string',  title: 'Full name',  minLength: 2, maxLength: 80 },
-      email:   { type: 'string',  format: 'email', title: 'Email' },
-      age:     { type: 'number',  title: 'Age', minimum: 18, maximum: 120 },
-      active:  { type: 'boolean', title: 'Active' },
-      website: { type: 'string',  format: 'uri', title: 'Website' },
-      country: { type: 'string',  title: 'Country', enum: ['FR', 'US', 'UK'] },
+      name: { type: 'string', title: 'Full name', minLength: 2, maxLength: 80 },
+      email: { type: 'string', format: 'email', title: 'Email' },
+      age: { type: 'number', title: 'Age', minimum: 18, maximum: 120 },
+      active: { type: 'boolean', title: 'Active' },
+      website: { type: 'string', format: 'uri', title: 'Website' },
+      country: { type: 'string', title: 'Country', enum: ['FR', 'US', 'UK'] },
     },
   };
 
   it('maps all properties', () => {
     const schema = parseJsonSchema(JS);
-    expect(Object.keys(schema)).toEqual(['name','email','age','active','website','country']);
+    expect(Object.keys(schema)).toEqual([
+      'name',
+      'email',
+      'age',
+      'active',
+      'website',
+      'country',
+    ]);
   });
 
-  it('maps string → text', ()  => { expect(parseJsonSchema(JS).name._type).toBe('text'); });
-  it('maps email format → email', () => { expect(parseJsonSchema(JS).email._type).toBe('email'); });
-  it('maps number → number', () => { expect(parseJsonSchema(JS).age._type).toBe('number'); });
-  it('maps boolean → switch', () => { expect(parseJsonSchema(JS).active._type).toBe('switch'); });
-  it('maps uri format → url', () => { expect(parseJsonSchema(JS).website._type).toBe('url'); });
+  it('maps string → text', () => {
+    expect(parseJsonSchema(JS).name._type).toBe('text');
+  });
+  it('maps email format → email', () => {
+    expect(parseJsonSchema(JS).email._type).toBe('email');
+  });
+  it('maps number → number', () => {
+    expect(parseJsonSchema(JS).age._type).toBe('number');
+  });
+  it('maps boolean → switch', () => {
+    expect(parseJsonSchema(JS).active._type).toBe('switch');
+  });
+  it('maps uri format → url', () => {
+    expect(parseJsonSchema(JS).website._type).toBe('url');
+  });
   it('maps enum → select with options', () => {
     const schema = parseJsonSchema(JS);
     expect(schema.country._type).toBe('select');

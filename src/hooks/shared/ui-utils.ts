@@ -1,15 +1,16 @@
 import type {
   ExtraFieldProps,
-  FieldAppearanceConfig,
-  FieldAppearanceOverrides,
+  FieldBehaviorConfig,
   FieldStyleValue,
   FieldTheme,
   NativeFieldUiOverrides,
   NativeFormUiOverrides,
+  NativeGlobalFieldUiOverrides,
   NativeStyleValue,
   NativeSubmitUiOverrides,
   WebFieldUiOverrides,
   WebFormUiOverrides,
+  WebGlobalFieldUiOverrides,
   WebSubmitUiOverrides,
 } from '../../types';
 
@@ -20,16 +21,11 @@ function mergeClassNames(...values: Array<string | undefined>): string | undefin
 
 function mergeObjectLike<T extends object>(base?: T, override?: T): T | undefined {
   if (!base && !override) return undefined;
+
   return {
     ...base,
     ...override,
   } as T;
-}
-
-function isPlainObjectStyle(
-  value: FieldStyleValue | undefined,
-): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function mergeWebSlotClasses(
@@ -146,99 +142,111 @@ export function mergeNativeFieldUi(
   };
 }
 
-export function mergeFieldStyleProps(
+export function mergeFieldStyleProps<
+  TLocalUi extends WebFieldUiOverrides | WebGlobalFieldUiOverrides,
+>(
+  platform: 'web',
+  theme?: FieldTheme<WebGlobalFieldUiOverrides, 'web'>,
+  local?: ExtraFieldProps<TLocalUi, 'web'>,
+): ExtraFieldProps<TLocalUi, 'web'> | undefined;
+export function mergeFieldStyleProps<
+  TLocalUi extends NativeFieldUiOverrides | NativeGlobalFieldUiOverrides,
+>(
+  platform: 'native',
+  theme?: FieldTheme<NativeGlobalFieldUiOverrides, 'native'>,
+  local?: ExtraFieldProps<TLocalUi, 'native'>,
+): ExtraFieldProps<TLocalUi, 'native'> | undefined;
+export function mergeFieldStyleProps<
+  TWebLocalUi extends WebFieldUiOverrides | WebGlobalFieldUiOverrides,
+  TNativeLocalUi extends NativeFieldUiOverrides | NativeGlobalFieldUiOverrides,
+>(
   platform: 'web' | 'native',
-  theme?: FieldTheme,
-  local?: ExtraFieldProps,
-): ExtraFieldProps | undefined {
+  theme?:
+    | FieldTheme<WebGlobalFieldUiOverrides, 'web'>
+    | FieldTheme<NativeGlobalFieldUiOverrides, 'native'>,
+  local?: ExtraFieldProps<TWebLocalUi, 'web'> | ExtraFieldProps<TNativeLocalUi, 'native'>,
+):
+  | ExtraFieldProps<TWebLocalUi, 'web'>
+  | ExtraFieldProps<TNativeLocalUi, 'native'>
+  | undefined {
   if (!theme && !local) return undefined;
 
-  const mergedClassName = mergeClassNames(theme?.className, local?.className);
-  const mergedStyle =
-    platform === 'native'
-      ? mergeNativeStyleValue(
-          theme?.style as NativeStyleValue | undefined,
-          local?.style as NativeStyleValue | undefined,
-        )
-      : theme?.style || local?.style
-        ? Object.assign({}, theme?.style ?? {}, local?.style ?? {})
+  if (platform === 'web') {
+    const webTheme = theme as FieldTheme<WebGlobalFieldUiOverrides, 'web'> | undefined;
+    const webLocal = local as ExtraFieldProps<TWebLocalUi, 'web'> | undefined;
+    const mergedStyle =
+      webTheme?.style || webLocal?.style
+        ? Object.assign({}, webTheme?.style ?? {}, webLocal?.style ?? {})
         : undefined;
-  const mergedAppearance =
-    platform === 'web'
-      ? mergeWebFieldUi(
-          theme?.appearance as WebFieldUiOverrides | undefined,
-          local?.appearance as WebFieldUiOverrides | undefined,
-        )
-      : mergeNativeFieldUi(
-          theme?.appearance as NativeFieldUiOverrides | undefined,
-          local?.appearance as NativeFieldUiOverrides | undefined,
-        );
+    const mergedClassName = mergeClassNames(webTheme?.className, webLocal?.className);
+    const mergedUi = mergeWebFieldUi(
+      webTheme?.ui as WebFieldUiOverrides | undefined,
+      webLocal?.ui as WebFieldUiOverrides | undefined,
+    );
+
+    return {
+      ...webLocal,
+      ...(mergedClassName ? { className: mergedClassName } : {}),
+      ...(mergedStyle ? { style: mergedStyle } : {}),
+      ...(mergedUi ? { ui: mergedUi as TWebLocalUi } : {}),
+    };
+  }
+
+  const nativeTheme = theme as
+    | FieldTheme<NativeGlobalFieldUiOverrides, 'native'>
+    | undefined;
+  const nativeLocal = local as ExtraFieldProps<TNativeLocalUi, 'native'> | undefined;
+  const mergedStyle = mergeNativeStyleValue(nativeTheme?.style, nativeLocal?.style);
+  const mergedUi = mergeNativeFieldUi(
+    nativeTheme?.ui as NativeFieldUiOverrides | undefined,
+    nativeLocal?.ui as NativeFieldUiOverrides | undefined,
+  );
 
   return {
-    ...local,
-    ...(mergedClassName ? { className: mergedClassName } : {}),
+    ...nativeLocal,
     ...(mergedStyle ? { style: mergedStyle } : {}),
-    ...(mergedAppearance
-      ? { appearance: mergedAppearance as FieldAppearanceOverrides }
-      : {}),
+    ...(mergedUi ? { ui: mergedUi as TNativeLocalUi } : {}),
   };
 }
 
 export function resolveWebFieldConfig(
-  appearance?: FieldAppearanceConfig,
+  behavior?: FieldBehaviorConfig,
 ): WebFieldUiOverrides | undefined {
-  const fromAppearance = appearance
+  const fromBehavior = behavior
     ? {
-        id: appearance.id,
-        readOnly: appearance.readOnly,
-        autoComplete: appearance.autoComplete,
-        autoFocus: appearance.autoFocus,
-        spellCheck: appearance.spellCheck,
-        inputMode: appearance.inputMode,
-        enterKeyHint: appearance.enterKeyHint,
-        rootClassName: appearance.rootClassName,
-        labelClassName: appearance.labelClassName,
-        inputClassName: appearance.inputClassName,
-        rootStyle: isPlainObjectStyle(appearance.rootStyle)
-          ? appearance.rootStyle
-          : undefined,
-        labelStyle: isPlainObjectStyle(appearance.labelStyle)
-          ? appearance.labelStyle
-          : undefined,
-        inputStyle: isPlainObjectStyle(appearance.inputStyle)
-          ? appearance.inputStyle
-          : undefined,
-        highlightOnError: appearance.highlightOnError,
-        renderPicker: appearance.renderPicker,
+        id: behavior.id,
+        readOnly: behavior.readOnly,
+        autoComplete: behavior.autoComplete,
+        autoFocus: behavior.autoFocus,
+        spellCheck: behavior.spellCheck,
+        inputMode: behavior.inputMode,
+        enterKeyHint: behavior.enterKeyHint,
+        highlightOnError: behavior.highlightOnError,
+        renderPicker: behavior.renderPicker,
       }
     : undefined;
 
-  return fromAppearance;
+  return fromBehavior;
 }
 
 export function resolveNativeFieldConfig(
-  appearance?: FieldAppearanceConfig,
+  behavior?: FieldBehaviorConfig,
 ): NativeFieldUiOverrides | undefined {
-  const fromAppearance = appearance
+  const fromBehavior = behavior
     ? {
-        id: appearance.id,
-        testID: appearance.testID,
-        readOnly: appearance.readOnly,
-        autoComplete: appearance.autoComplete,
-        autoFocus: appearance.autoFocus,
-        keyboardType: appearance.keyboardType,
-        secureTextEntry: appearance.secureTextEntry,
-        rootStyle: appearance.rootStyle as NativeStyleValue | undefined,
-        labelStyle: appearance.labelStyle as NativeStyleValue | undefined,
-        inputStyle: appearance.inputStyle as NativeStyleValue | undefined,
-        hintStyle: appearance.hintStyle as NativeStyleValue | undefined,
-        errorStyle: appearance.errorStyle as NativeStyleValue | undefined,
-        highlightOnError: appearance.highlightOnError,
-        renderPicker: appearance.renderPicker,
+        id: behavior.id,
+        testID: behavior.testID,
+        readOnly: behavior.readOnly,
+        autoComplete: behavior.autoComplete,
+        autoFocus: behavior.autoFocus,
+        keyboardType: behavior.keyboardType,
+        secureTextEntry: behavior.secureTextEntry,
+        highlightOnError: behavior.highlightOnError,
+        renderPicker: behavior.renderPicker,
       }
     : undefined;
 
-  return fromAppearance;
+  return fromBehavior;
 }
 
 export function mergeWebFormUi(
@@ -275,7 +283,7 @@ export function mergeWebSubmitUi(
     className: mergeClassNames(theme?.className, localClassName),
     style:
       theme?.style || localStyle
-        ?  Object.assign({}, theme?.style ?? {}, localStyle ?? {})
+        ? Object.assign({}, theme?.style ?? {}, localStyle ?? {})
         : undefined,
     loadingText: localLoadingText ?? theme?.loadingText,
     props: theme?.props,
