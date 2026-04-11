@@ -73,7 +73,7 @@ type UseFormBridgeHook<TPlatform extends Platform> = <S extends FormSchema>(
 export function createUseDynamicFormBridge<TPlatform extends Platform>(
   useFormBridge: UseFormBridgeHook<TPlatform>,
 ) {
-  return function useDynamicForm<S extends FormSchema>(
+  return function useDynamicFormBridge<S extends FormSchema>(
     source: JsonFormDefinition | (() => Promise<JsonFormDefinition>),
     options: UseDynamicFormOptions<S, TPlatform> = {},
   ): UseDynamicFormReturn<TPlatform> {

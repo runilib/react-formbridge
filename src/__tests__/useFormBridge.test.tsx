@@ -1,6 +1,7 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { field } from '../core/field-builders/field';
+import { useFormBridgeContext } from '../hooks/shared/form-context';
 import { useFormBridge } from '../hooks/useFormBridge.web';
 
 function setup() {
@@ -141,7 +142,7 @@ describe('useForm — setError / clearErrors', () => {
   });
 });
 
-describe('useForm — reset', () => {
+describe('useForm — resetFields', () => {
   it('resets all values to defaults', () => {
     const { result } = setup();
     act(() => {
@@ -149,7 +150,7 @@ describe('useForm — reset', () => {
       result.current.setError('email', 'Err');
     });
     act(() => {
-      result.current.reset();
+      result.current.resetFields();
     });
     expect(result.current.state.values.email).toBe('');
     expect(result.current.state.errors).toEqual({});
@@ -160,7 +161,7 @@ describe('useForm — reset', () => {
   it('reset with partial values prefills those fields', () => {
     const { result } = setup();
     act(() => {
-      result.current.reset({ name: 'Prefilled', age: 25 });
+      result.current.resetFields({ name: 'Prefilled', age: 25 });
     });
     expect(result.current.state.values.name).toBe('Prefilled');
     expect(result.current.state.values.age).toBe(25);
@@ -283,6 +284,76 @@ describe('useForm — submit lifecycle', () => {
     // submitCount will be 0 because submit fn not set via Form component in this test context
     // Just verify the hook doesn't crash
     expect(result.current.state.submitCount).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('useFormBridgeContext', () => {
+  it('exposes the current form inside <form.Form>', () => {
+    const schema = {
+      firstName: field.text('First name').required(),
+    };
+
+    function Mirror() {
+      const form = useFormBridgeContext<typeof schema, 'web'>();
+      return <span data-testid="mirror">{form.watch('firstName')}</span>;
+    }
+
+    function Harness() {
+      const form = useFormBridge(schema);
+
+      return (
+        <form.Form onSubmit={() => {}}>
+          <button
+            type="button"
+            onClick={() => form.setValue('firstName', 'Ada')}
+          >
+            Fill name
+          </button>
+          <Mirror />
+        </form.Form>
+      );
+    }
+
+    render(<Harness />);
+
+    fireEvent.click(screen.getByText('Fill name'));
+
+    expect(screen.getByTestId('mirror').textContent).toBe('Ada');
+  });
+
+  it('supports explicit FormProvider for consumers outside <form.Form>', () => {
+    const schema = {
+      firstName: field.text('First name').required(),
+    };
+
+    function HeaderValue() {
+      const form = useFormBridgeContext<typeof schema, 'web'>();
+      return <span data-testid="header-value">{form.watch('firstName')}</span>;
+    }
+
+    function Harness() {
+      const form = useFormBridge(schema);
+
+      return (
+        <form.FormProvider>
+          <HeaderValue />
+          <form.Form onSubmit={() => {}}>
+            <button
+              type="button"
+              onClick={() => form.setValue('firstName', 'Grace')}
+            >
+              Fill header
+            </button>
+          </form.Form>
+        </form.FormProvider>
+      );
+    }
+
+    render(<Harness />);
+
+    fireEvent.click(screen.getByText('Fill header'));
+
+    expect(screen.getByTestId('header-value').textContent).toBe('Grace');
   });
 });
 

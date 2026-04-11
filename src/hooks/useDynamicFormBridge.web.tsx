@@ -2,8 +2,8 @@ import type { FormSchema } from '../types/schema';
 import type {
   UseDynamicFormOptions as SharedUseDynamicFormOptions,
   UseDynamicFormReturn as SharedUseDynamicFormReturn,
-} from './shared/useDynamicForm';
-import { createUseDynamicFormBridge } from './shared/useDynamicForm';
+} from './shared/useDynamicFormBridge';
+import { createUseDynamicFormBridge } from './shared/useDynamicFormBridge';
 import { useFormBridge } from './useFormBridge.web';
 
 export type UseDynamicFormOptions<S extends FormSchema> = SharedUseDynamicFormOptions<
@@ -12,4 +12,4 @@ export type UseDynamicFormOptions<S extends FormSchema> = SharedUseDynamicFormOp
 >;
 export type UseDynamicFormReturn = SharedUseDynamicFormReturn<'web'>;
 
-export const useDynamicForm = createUseDynamicFormBridge(useFormBridge);
+export const useDynamicFormBridge = createUseDynamicFormBridge(useFormBridge);

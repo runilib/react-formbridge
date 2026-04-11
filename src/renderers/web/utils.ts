@@ -2,16 +2,16 @@ import type {
   FieldDescriptor,
   FieldRenderProps,
   SelectOption,
-  WebFieldUiOverrides,
-} from '../../../types';
-import type { ExtraFieldProps } from '../../../types.web';
-import type { ResolvedWebFieldUi } from '../shared';
+  WebFieldPropsOverrides,
+} from '../../types';
+import type { ExtraFieldProps } from '../../types.web';
+import type { ResolvedWebFieldProps } from './shared';
 
 interface Props extends FieldRenderProps<unknown> {
   descriptor: FieldDescriptor<unknown> & {
-    _ui?: ResolvedWebFieldUi;
+    fieldPropsFromClient?: ResolvedWebFieldProps;
   };
-  extra?: ExtraFieldProps<WebFieldUiOverrides>;
+  extra?: ExtraFieldProps<WebFieldPropsOverrides>;
 }
 
 export function toHtmlPatternSource(descriptor: Props['descriptor']): string | undefined {
